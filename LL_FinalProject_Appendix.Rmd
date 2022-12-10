@@ -1,0 +1,475 @@
+---
+title: "Lucas Lyons STA238 Final Project Appendix"
+output: pdf_document
+date: '2022-03-20'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, results='hide', message=FALSE, warning=FALSE, echo=FALSE}
+# Install Packages
+library(Stat2Data)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(gridExtra)
+data("Hawks")
+```
+# Citation for data set: https://CRAN.R-project.org/package=Stat2Data
+
+## Appendix 1
+```{r, warning=FALSE}
+#Count missing data
+count <- Hawks %>%
+  gather(data, value, Age:Tail) %>%
+  filter(is.na(value))
+length(count)
+```
+
+```{r}
+# Load in some variables
+hawks <- Hawks %>%
+  select(c("Species", "Age", "Sex", "Wing", "Weight", "Tail"))
+# Remove missing data
+hawks <- na.omit(hawks)
+# Label Species
+hawks <- hawks %>%
+  mutate(Species = recode(Species, 
+                          RT = "Red-Tailed", 
+                          SS = "Sharp-shinned", 
+                          CH = "Cooper's"))
+
+```
+\newpage
+## Appendix 2
+```{r}
+#make box plots
+p1 <- ggplot(hawks, aes(x=Species, y=Wing, color=Species)) +
+  geom_boxplot() +
+  ylab("Wing Length in mm") +
+  coord_flip() #flip x and y
+p2 <- ggplot(hawks, aes(x=Species, y=Weight, color=Species)) +
+  geom_boxplot() +
+  ylab("Weight in gm") +
+  coord_flip()
+p3 <- ggplot(hawks, aes(x=Species, y=Tail, color=Species)) +
+  geom_boxplot() +
+  ylab("Tail Length in mm") +
+  coord_flip() 
+
+#arrange!
+grid.arrange(p1, p2, p3)
+```
+\newpage
+## Appendix 3
+```{r}
+hawks %>%
+  ggplot(aes(x = Wing, y = Tail, color = Species)) +
+  geom_point() +
+  labs(title = "Wing Length and Tail Length of 3 Species of Hawks", 
+       subtitle = "Cooper's, Red-tailed, and Sharp-shinned Hawks") +
+  ylab("Tail Length (in mm)") +
+  xlab("Wing Length (in mm)") +
+  theme_minimal()
+```
+
+
+## Appendix 4
+```{r}
+#Subset our data by species
+red <- hawks %>%
+  subset(Species == "Red-Tailed")
+sharp <- hawks %>%
+  subset(Species == "Sharp-shinned")
+coop <- hawks %>%
+  subset(Species == "Cooper's")
+
+#Assess whether our data is normally distributed via qq plot
+
+#Create list of variable names
+params <- names(hawks)
+
+#Create empty lists for qq plots
+plots.red <- list()
+plots.coop <- list()
+plots.sharp <- list()
+
+#Loops making qq plots for wing, tail, and weight for each species
+for(i in 4:6){
+  plot <- red %>%
+    ggplot(aes_string(sample=params[i])) +
+    geom_qq() +
+    geom_qq_line() +
+    xlab("N(0,1) Quantiles") +
+    ylab(paste(params[i], "Quantiles"))
+  plots.red[[i-3]] <- plot}
+
+for(i in 4:6){
+  plot <- coop %>%
+    ggplot(aes_string(sample=params[i])) +
+    geom_qq() +
+    geom_qq_line() +
+    xlab("N(0,1) Quantiles") +
+    ylab(paste(params[i], "Quantiles"))
+  plots.coop[[i-3]] <- plot}
+
+for(i in 4:6){
+  plot <- sharp %>%
+    ggplot(aes_string(sample=params[i])) +
+    geom_qq() +
+    geom_qq_line() +
+    xlab("N(0,1) Quantiles") +
+    ylab(paste(params[i], "Quantiles"))
+  plots.sharp[[i-3]] <- plot}
+
+#Arrange our plots in a nice format
+grid.arrange(arrangeGrob(grobs = plots.red, top = "Red-Tailed"), 
+             arrangeGrob(grobs = plots.coop, top = "Cooper's"), 
+             arrangeGrob(grobs = plots.sharp, top = "Sharp-Shinned"), ncol=3)
+```
+
+```{r}
+#Set parameters
+len <- c(length(red$Wing), length(coop$Wing), length(sharp$Wing))
+B <- 2000
+set.seed(1001755451)
+
+#Create empty matrices
+boot.wing.red <- matrix(ncol = len[1], nrow = B)
+boot.weight.red <- matrix(ncol = len[1], nrow = B)
+boot.tail.red <- matrix(ncol = len[1], nrow = B)
+
+boot.wing.coop <- matrix(ncol = len[2], nrow = B)
+boot.weight.coop <- matrix(ncol = len[2], nrow = B)
+boot.tail.coop <- matrix(ncol = len[2], nrow = B)
+
+boot.wing.sharp <- matrix(ncol = len[3], nrow = B)
+boot.weight.sharp <- matrix(ncol = len[3], nrow = B)
+boot.tail.sharp <- matrix(ncol = len[3], nrow = B)
+
+#Bootstrap!
+for(i in 1:B){
+  for(x in 1:len[1]){
+    boot.wing.red[i,x] <- sample(red$Wing, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[1]){
+    boot.weight.red[i,x] <- sample(red$Weight, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[1]){
+    boot.tail.red[i,x] <- sample(red$Tail, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[2]){
+    boot.wing.coop[i,x] <- sample(coop$Wing, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[2]){
+    boot.weight.coop[i,x] <- sample(coop$Weight, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[2]){
+    boot.tail.coop[i,x] <- sample(coop$Tail, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[3]){
+    boot.wing.sharp[i,x] <- sample(sharp$Wing, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[3]){
+    boot.weight.sharp[i,x] <- sample(sharp$Weight, 1, replace = TRUE)
+  }
+}
+
+for(i in 1:B){
+  for(x in 1:len[3]){
+    boot.tail.sharp[i,x] <- sample(sharp$Tail, 1, replace = TRUE)
+  }
+}
+```
+
+```{r}
+#Generate parameters
+mean.wing.red <- mean(red$Wing)
+sd.wing.red <- sd(red$Wing)
+mean.weight.red <- mean(red$Weight)
+sd.weight.red <- sd(red$Weight)
+mean.tail.red <- mean(red$Tail)
+sd.tail.red <- sd(red$Tail)
+mean.wing.coop <- mean(coop$Wing)
+sd.wing.coop <- sd(coop$Wing)
+mean.weight.coop <- mean(coop$Weight)
+sd.weight.coop <- sd(coop$Weight)
+mean.tail.coop <- mean(coop$Tail)
+sd.tail.coop <- sd(coop$Tail)
+mean.wing.sharp <- mean(sharp$Wing)
+sd.wing.sharp <- sd(sharp$Wing)
+mean.weight.sharp <- mean(sharp$Weight)
+sd.weight.sharp <- sd(sharp$Weight)
+mean.tail.sharp <- mean(sharp$Tail)
+sd.tail.sharp <- sd(sharp$Tail)
+
+#Create empty vectors
+bs.means.redwing <- c()
+bs.means.redweight <- c()
+bs.means.redtail <- c()
+bs.means.coopwing <- c()
+bs.means.coopweight <- c()
+bs.means.cooptail <- c()
+bs.means.sharpwing <- c()
+bs.means.sharpweight <- c()
+bs.means.sharptail <- c()
+
+#Create empty list for confidence intervals
+ci <- list()
+
+# Find studentized means and plug in result to
+# confidence interval list
+for(i in 1:B){
+  boot.mean <- mean(boot.wing.red[i,])
+  boot.sd <- sd(boot.wing.red[i,])
+  bs.means.redwing[i] <- (boot.mean - mean.wing.red)/(boot.sd/sqrt(len[1]))
+}
+crit <- quantile(bs.means.redwing, probs=c(0.995, 0.005))
+ci[[1]] <- mean.wing.red-crit*sd.wing.red/sqrt(len[1])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.weight.red[i,])
+  boot.sd <- sd(boot.weight.red[i,])
+  bs.means.redweight[i] <- (boot.mean - mean.weight.red)/(boot.sd/sqrt(len[1]))
+}
+crit <- quantile(bs.means.redweight, probs=c(0.995, 0.005))
+ci[[2]] <- mean.weight.red-crit*sd.weight.red/sqrt(len[1])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.tail.red[i,])
+  boot.sd <- sd(boot.tail.red[i,])
+  bs.means.redtail[i] <- (boot.mean - mean.tail.red)/(boot.sd/sqrt(len[1]))
+}
+crit <- quantile(bs.means.redtail, probs=c(0.995, 0.005))
+ci[[3]] <- mean.tail.red-crit*sd.tail.red/sqrt(len[1])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.wing.coop[i,])
+  boot.sd <- sd(boot.wing.coop[i,])
+  bs.means.coopwing[i] <- (boot.mean - mean.wing.coop)/(boot.sd/sqrt(len[2]))
+}
+crit <- quantile(bs.means.coopwing, probs=c(0.995, 0.005))
+ci[[4]] <- mean.wing.coop-crit*sd.wing.coop/sqrt(len[2])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.weight.coop[i,])
+  boot.sd <- sd(boot.weight.coop[i,])
+  bs.means.coopweight[i] <- (boot.mean - mean.weight.coop)/(boot.sd/sqrt(len[2]))
+}
+crit <- quantile(bs.means.coopweight, probs=c(0.995, 0.005))
+ci[[5]] <- mean.weight.coop-crit*sd.weight.coop/sqrt(len[2])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.tail.coop[i,])
+  boot.sd <- sd(boot.tail.coop[i,])
+  bs.means.cooptail[i] <- (boot.mean - mean.tail.coop)/(boot.sd/sqrt(len[2]))
+}
+crit <- quantile(bs.means.cooptail, probs=c(0.995, 0.005))
+ci[[6]] <- mean.tail.coop-crit*sd.tail.coop/sqrt(len[2])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.wing.sharp[i,])
+  boot.sd <- sd(boot.wing.sharp[i,])
+  bs.means.sharpwing[i] <- (boot.mean - mean.wing.sharp)/(boot.sd/sqrt(len[3]))
+}
+crit <- quantile(bs.means.sharpwing, probs=c(0.995, 0.005))
+ci[[7]] <- mean.wing.sharp-crit*sd.wing.sharp/sqrt(len[3])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.weight.sharp[i,])
+  boot.sd <- sd(boot.weight.sharp[i,])
+  bs.means.sharpweight[i] <- (boot.mean - mean.weight.sharp)/(boot.sd/sqrt(len[3]))
+}
+crit <- quantile(bs.means.sharpweight, probs=c(0.995, 0.005))
+ci[[8]] <- mean.weight.sharp-crit*sd.weight.sharp/sqrt(len[3])
+
+for(i in 1:B){
+  boot.mean <- mean(boot.tail.sharp[i,])
+  boot.sd <- sd(boot.tail.sharp[i,])
+  bs.means.sharptail[i] <- (boot.mean - mean.tail.sharp)/(boot.sd/sqrt(len[3]))
+}
+crit <- quantile(bs.means.sharptail, probs=c(0.995, 0.005))
+ci[[9]] <- mean.tail.sharp-crit*sd.tail.sharp/sqrt(len[3])
+ci
+```
+\newpage
+## Appendix 5
+```{r}
+#Check for linear relation
+sharp %>%
+  ggplot(aes(x=Wing,y=Tail)) +
+  geom_point()
+
+```
+
+```{r}
+#Create linear model
+model.sharp <- lm(sharp$Tail ~ sharp$Wing)
+summary(model.sharp)
+
+#Create new entry in data set for residuals
+sharp$res <- model.sharp$residuals
+
+#Histogram for normalcy test
+hist <- ggplot(sharp, aes(x=res, y=..density..))+
+  geom_histogram(bins = 12, 
+                 fill='thistle2',
+                 colour='black')+
+  theme_light()+
+  labs(x='Residuals',
+       y='Density')
+
+#qq plot for normalcy test
+qq <- ggplot(sharp, aes(sample=res))+
+  geom_qq()+
+  geom_qq_line()+
+  theme_light()+
+  labs(x='N(0, 1) Percentiles',
+       y='Residual Percentiles',
+       title='Normal QQ Plot')
+
+#Scatter plot for residual independence and distribution test
+scatter <- ggplot(sharp, aes(x=Wing, y=res))+
+  geom_point()+
+  geom_hline(yintercept=0, colour='red', lty=2)+
+  theme_light()+
+  labs(x='Wing Length', 
+       y='Residuals')
+
+#Arrange nicely!
+grid.arrange(hist, qq, scatter, 
+             layout_matrix=rbind(c(1, 1, 2, 2),
+                                 c(NA, 3, 3, NA)),
+             top = "Sharp-Shinned Hawk SLR Assumption Test")
+```
+
+```{r}
+#Check for linear relation
+red %>%
+  ggplot(aes(x=Wing,y=Tail)) +
+  geom_point() +
+  xlab("Wing length in mm") +
+  ylab("Tail length in mm") +
+  ggtitle("Red-tailed Hawk", sub="Wing vs Tail length")
+```
+
+```{r}
+#Create linear model
+model.red <- lm(red$Tail ~ red$Wing)
+summary(model.red)
+
+#Create new entry in data set for residuals
+red$res <- model.red$residuals
+
+#Histogram for normalcy test
+hist2 <- ggplot(red, aes(x=res, y=..density..))+
+  geom_histogram(bins = 12, 
+                 fill='thistle2',
+                 colour='black')+
+  theme_light()+
+  labs(x='Residuals',
+       y='Density')
+
+#qq plot for normalcy test
+qq2 <- ggplot(red, aes(sample=res))+
+  geom_qq()+
+  geom_qq_line()+
+  theme_light()+
+  labs(x='N(0, 1) Percentiles',
+       y='Residual Percentiles',
+       title='Normal QQ Plot')
+
+#Scatter plot for residual independence and distribution test
+scatter2 <- ggplot(red, aes(x=Wing, y=res))+
+  geom_point()+
+  geom_hline(yintercept=0, colour='red', lty=2)+
+  theme_light()+
+  labs(x='Wing', 
+       y='Residuals')
+
+#Arrange nicely!
+grid.arrange(hist2, qq2, scatter2, 
+             layout_matrix=rbind(c(1, 1, 2, 2),
+                                 c(NA, 3, 3, NA)),
+             top = "Red-Tailed Hawk SLR Assumption Test")
+```
+```{r}
+#Check for linear relation
+coop %>%
+  ggplot(aes(x=Wing,y=Tail)) +
+  geom_point()
+```
+
+```{r}
+#Create linear model
+model.coop <- lm(coop$Tail ~ coop$Wing)
+summary(model.coop)
+
+#Create new entry in data set for residuals
+coop$res <- model.coop$residuals
+
+#Histogram for normalcy test
+hist3 <- ggplot(coop, aes(x=res, y=..density..))+
+  geom_histogram(bins = 12, 
+                 fill='thistle2',
+                 colour='black')+
+  theme_light()+
+  labs(x='Residuals',
+       y='Density')
+
+#qq plot for normalcy test
+qq3 <- ggplot(coop, aes(sample=res))+
+  geom_qq()+
+  geom_qq_line()+
+  theme_light()+
+  labs(x='N(0, 1) Percentiles',
+       y='Residual Percentiles',
+       title='Normal QQ Plot')
+
+#Scatter plot for residual independence and distribution test
+scatter3 <- ggplot(coop, aes(x=Wing, y=res))+
+  geom_point()+
+  geom_hline(yintercept=0, colour='red', lty=2)+
+  theme_light()+
+  labs(x='Wing', 
+       y='Residuals')
+
+#Arrange nicely!
+grid.arrange(hist3, qq3, scatter3, 
+             layout_matrix=rbind(c(1, 1, 2, 2),
+                                 c(NA, 3, 3, NA)),
+             top = "Cooper's Hawk SLR Assumption Test")
+```
+\newpage
+
+## Appendix 6
+```{r}
+#make confidence intervals from linear models
+confint(model.sharp)
+confint(model.red)
+confint(model.coop)
+```
+
