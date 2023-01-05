@@ -1,0 +1,1466 @@
+---
+title: "Final Project R Code"
+author: "Lucas Lyons"
+date: "12/5/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE, echo=FALSE, message=FALSE}
+#Load in packages
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(tidyverse)
+devtools::install_github("yeukyul/lindia")
+library(lindia)
+library(car)
+library(carData)
+library(knitr)
+library(kableExtra)
+library(gt)
+library(gtExtras)
+library(grid)
+library(webshot2)
+library(GGally)
+library(gtsummary)
+```
+
+
+```{r}
+#Set a seed for reproducibility
+set.seed(2022)
+
+# Load in the dataset
+hoops <- read.csv("all_seasons.csv")
+
+#Remove the only incomplete case, include only players with 10+ games played.
+hoops <- hoops[complete.cases(hoops)
+               & hoops$gp > 10,]
+#We will be looking specifically at 7 variables: season, player_height, pts, usg_pct, ast_pct, oreb_pct, dreb_pct so let's modify the dataset to only have these columns
+keeps <- c("X","season","player_height", "dreb_pct","oreb_pct", "ast_pct","usg_pct" ,"pts", "player_name")
+hoops <- subset(hoops, select = keeps)
+
+#Create a list subsetting the data by year.
+seasons <- split(hoops, f = hoops$season)
+
+#We'll take 5 season out of the 25 we started with to perform rigorous analysis on.
+seasons <- list(seasons[[1]], seasons[[7]], seasons[[13]],
+                   seasons[[19]], seasons[[25]])
+```
+
+
+```{r, message=FALSE}
+#First let's take a look at the variables we will be using for our analysis.
+
+#Create a vector containing the names of the variables we want to analyze
+vars <- c("ast_pct", "pts", "usg_pct", "oreb_pct", "dreb_pct")
+#Create a vector of names for usage in the function
+var_labs <- c("Assist Percentage", "Points", "Usage Percentage", "Offensive Rebound Percentage", "Defensive Rebound Percentage")
+
+height_plots <- list()
+ast_plots <- list()
+dreb_plots <- list()
+oreb_plots <- list()
+usg_plots <- list()
+pts_plots <- list()
+
+for(i in 1:5){
+  title <- paste(seasons[[i]]$season, "Season")
+  plot <- ggplot(data = seasons[[i]], aes(x=player_height)) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab("Height") + 
+    ylab("Frequency") +
+    theme(axis.title.x=element_text(size=20),
+          axis.title.y=element_text(size=16),
+          axis.text.x=element_text(size=14),
+          axis.text.y=element_text(size=18),
+          plot.title=element_text(size=20))
+  height_plots[[i]] <- plot
+}
+
+for(i in 1:5){
+  title <- paste(seasons[[i]]$season, "Season")
+  plot <- ggplot(data = seasons[[i]], aes(x=ast_pct)) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab("Assist Percentage") + 
+    ylab("Frequency") +
+    theme(axis.title.x=element_text(size=20),
+          axis.title.y=element_text(size=16),
+          axis.text.x=element_text(size=14),
+          axis.text.y=element_text(size=18),
+          plot.title=element_text(size=20))
+  ast_plots[[i]] <- plot
+}
+
+for(i in 1:5){
+  title <- paste(seasons[[i]]$season, "Season")
+  plot <- ggplot(data = seasons[[i]], aes(x=dreb_pct)) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab("Def. Rebound Pctg.") + 
+    ylab("Frequency") +
+    theme(axis.title.x=element_text(size=20),
+          axis.title.y=element_text(size=16),
+          axis.text.x=element_text(size=14),
+          axis.text.y=element_text(size=18),
+          plot.title=element_text(size=20))
+  dreb_plots[[i]] <- plot
+}
+
+for(i in 1:5){
+  title <- paste(seasons[[i]]$season, "Season")
+  plot <- ggplot(data = seasons[[i]], aes(x=oreb_pct)) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab("Off. Rebound Pctg.") + 
+    ylab("Frequency") +
+    theme(axis.title.x=element_text(size=20),
+          axis.title.y=element_text(size=16),
+          axis.text.x=element_text(size=14),
+          axis.text.y=element_text(size=18),
+          plot.title=element_text(size=20))
+  oreb_plots[[i]] <- plot
+}
+
+for(i in 1:5){
+  title <- paste(seasons[[i]]$season, "Season")
+  plot <- ggplot(data = seasons[[i]], aes(x=usg_pct)) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab("Usage Percentage") + 
+    ylab("Frequency") +
+    theme(axis.title.x=element_text(size=20),
+          axis.title.y=element_text(size=16),
+          axis.text.x=element_text(size=14),
+          axis.text.y=element_text(size=18),
+          plot.title=element_text(size=20))
+  usg_plots[[i]] <- plot
+}
+
+for(i in 1:5){
+  title <- paste(seasons[[i]]$season, "Season")
+  plot <- ggplot(data = seasons[[i]], aes(x=pts)) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab("Points") + 
+    ylab("Frequency") +
+    theme(axis.title.x=element_text(size=20),
+          axis.title.y=element_text(size=16),
+          axis.text.x=element_text(size=14),
+          axis.text.y=element_text(size=18),
+          plot.title=element_text(size=20))
+  pts_plots[[i]] <- plot
+}
+```
+
+```{r, message=FALSE}
+hlay <- rbind(c(1, 2, 3, 4, 5))
+height_plots_grob <- arrangeGrob(grobs=height_plots, layout_matrix = hlay,
+                            top = textGrob("Player Height",
+                                           gp = gpar(fontsize=18)))
+ast_plots_grob <- arrangeGrob(grobs=ast_plots, layout_matrix = hlay,
+                         top = textGrob("Average Assist Percentage",
+                                        gp = gpar(fontsize=18)))
+dreb_plots_grob <- arrangeGrob(grobs=dreb_plots, layout_matrix = hlay,
+                          top = textGrob("Average Defensive Rebound Percentage",
+                                         gp = gpar(fontsize=18)))
+oreb_plots_grob <- arrangeGrob(grobs=oreb_plots, layout_matrix = hlay,
+                          top = textGrob("Average Offensive Rebound Percentage",
+                                         gp = gpar(fontsize=18)))
+usg_plots_grob <- arrangeGrob(grobs=usg_plots, layout_matrix = hlay,
+                         top = textGrob("Average Usage Percentage",
+                                        gp = gpar(fontsize=18)))
+pts_plots_grob <- arrangeGrob(grobs=pts_plots, layout_matrix = hlay,
+                         top = textGrob("Average Points",
+                                        gp = gpar(fontsize=22)))
+```
+
+
+```{r, message=FALSE, fig.width=15, fig.height=20}
+p <- grid.arrange(height_plots_grob, ast_plots_grob, dreb_plots_grob,
+                  oreb_plots_grob, usg_plots_grob, pts_plots_grob, 
+                  ncol=1, nrow=6,
+                  top = textGrob("Frequency Histograms of Six NBA Individual Player Statistics, Five Seasons", gp = gpar(fontface = "bold", fontsize=20)))
+ggsave("all_variables.png", p)
+```
+
+
+```{r, message=FALSE}
+#As we can see, the most of the variables for each season are fairly right-skewed. This is potentially a cause for issue when we fit a linear model to these variables. Let's apply a square root transform to the data and plot it to get a sense of how it may look as we may want to try this transform later.
+#Repeat the same steps as above
+sqr_labs <- c("Square Root of Assist Pctg.", "Square Root of Points", "Square Root of Usage Pctg.", "Square Root of Offensive Rebound Pctg.", "Square Root of Defensive Rebound Pctg.")
+make_sqr_graphs <- function(var, data, name){
+  title <- paste(name, "Frequency for NBA Players,", data[[1,2]])
+  plot <- ggplot(data, aes(x=sqrt(data[,names(data) == var]))) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab(paste(name)) + 
+    ylab("Frequency")
+}
+
+var_graphs <- list()
+for(i in 1:5){
+  var_graphs[[i]] <- lapply(vars, make_sqr_graphs, data = seasons[[i]], 
+                            name = sqr_labs[i])
+}
+for(i in 1:5){
+  grid.arrange(grobs = var_graphs[[i]])
+}
+```
+It seems quite likely that the square rooted variables could be more amenable to linear regression analysis as the data is much less right-skewed. We'll keep this in mind moving forward.
+
+```{r}
+#Let's begin our analysis of the data with regression. First we'll split our data into training and test datasets.
+#Create empty lists
+train <- list()
+test <- list()
+
+#Create training and testing datasets
+for(i in 1:5){
+  dt = sort(sample(nrow(seasons[[i]]), nrow(seasons[[i]])*.7))
+  train[[i]] <- seasons[[i]][dt,]
+  test[[i]] <- seasons[[i]][-dt,]
+}
+
+```
+
+```{r, fig.width = 15, fig.height =10, message = FALSE, warning = FALSE}
+#Let's create scatter plots for each season and variable we'd like to perform analysis on to get a rough idea of whether linear relationships exist or not.
+vars <- c("ast_pct", "pts", "usg_pct", "oreb_pct", "dreb_pct")
+
+#Create a function for comparing player height to a given variable from a given dataset.
+make_scatter <- function(data, var) {
+  ggplot(data, aes_string(x = "player_height", y = var)) +
+    geom_point() +
+    ylab(paste(var))
+}
+
+#Make new vectors containing the output of the function for each season
+scatr_1 <- lapply(vars, make_scatter, data = train[[1]])
+scatr_2 <- lapply(vars, make_scatter, data = train[[2]])
+scatr_3 <- lapply(vars, make_scatter, data = train[[3]])
+scatr_4 <- lapply(vars, make_scatter, data = train[[4]])
+scatr_5 <- lapply(vars, make_scatter, data = train[[5]])
+```
+
+
+```{r, fig.width = 10, fig.height =10}
+#Arrange the plots nicely for each season
+grid.arrange(grobs = scatr_1)
+grid.arrange(grobs = scatr_2)
+grid.arrange(grobs = scatr_3)
+grid.arrange(grobs = scatr_4)
+grid.arrange(grobs = scatr_5)
+```
+
+
+```{r, fig.width = 15, fig.height =10}
+#Okay, player height appears to have a relationship with certain variables. In particular, assist percentage and both rebound variables seem to have some kind of relationship. Points and usage percentage seems to be the most weakly related across all 5 seasons. However, I want to see if these variables are related to player height when we fit a model when controlling for other variables.
+
+#Make a function for fitting models of the three predictors which seems to be linearly related.
+make_models <- function(data){
+  lm(player_height ~ ast_pct + dreb_pct + oreb_pct + usg_pct + pts, data = data)
+}
+
+#Use the function to fit models
+lms <- lapply(train, make_models)
+sums <- list()
+for(i in 1:5){
+  sums[[i]] <- summary(lms[[i]])
+}
+```
+Interestingly enough, we see that points and usage percentage are sometimes significant and sometimes not, depending on the season. We'll need to assess whether to keep or drop these predictors at a later time.
+
+```{r, fig.width = 15, fig.height =10}
+#Now we must assess our model assumptions! First let's check to see if condition 2 holds. We'll plot pairwise predictor graphs to see what the relationships between the predictors are like.
+pairs(train[[1]][,4:8])
+pairs(train[[2]][,4:8])
+pairs(train[[3]][,4:8])
+pairs(train[[4]][,4:8])
+pairs(train[[5]][,4:8])
+
+```
+Given the relationships we observed in the previous sets of scatterplots, it is highly likely the right skew of the predictor variables is reducing the quality of any linear model we will fit. Note in particular the "L" shape relationships between certain pairs of predictors which could be caused by right-skew. We should strongly consider running the same diagnostics with the predictors square root transformed, but first let's assess the rest of our assumptions.
+```{r, message = FALSE}
+#We'll check condition 1 by plotting the response vs fitted values for the models.
+fit_response_frames <- list()
+#make a data frame to store values
+for(i in 1:5){
+  fit_response_frames[[i]] <- data.frame("Fitted Values" = lms[[i]]$fitted.values,
+                                         "Response Values" = train[[i]]$player_height)
+}
+
+fit_response <- list()
+#make plots for each season with ggplot
+for(i in 1:5){
+  fit_response[[i]] <- ggplot(data = fit_response_frames[[i]],
+                              aes(x = Fitted.Values, y = Response.Values)) +
+    geom_point() +
+    ggtitle("Fitted vs. Response Plot") +
+    xlab("Fitted Values") +
+    ylab("Player Height (cm)")
+}
+fit_response
+```
+There do not appear to be violations of condition 1 as in each case the points are randomly scattered about the identity function.
+
+```{r}
+#Let's use VIF in order to detect if our model has excess multicollinearity which could cause problems in interpreting our findings.
+vifs <- list()
+for(i in 1:5){
+  vifs[[i]] <- vif(lms[[i]])
+}
+vifs
+```
+None of the variables are severely multicollinear as none of the VIF values are over 5, so this is good. Since we've verified that there are not significant violations of conditions 1 and 2, we can assess the residual plots of our model to see if we have violated any assumptions for linear regression in fitting the model.
+
+```{r, fig_width = 15, fig_height = 15}
+qqplots <- list()
+fit_res_plots <- list()
+for(i in 1:5){
+  qqplots[[i]] <- gg_qqplot(lms[[i]])
+  fit_res_plots[[i]] <- gg_resfitted(lms[[i]])
+}
+grid.arrange(grobs = qqplots)
+grid.arrange(grobs = fit_res_plots)
+```
+There appears to be a slight curvature in the pattern of the residuals for each season but in general the points appear randomly distributed about the 0 line with constant variance. The curvature is likely caused by the right skew in the predictor variables. There could be minor violations of heomeskedasticity but overall it does not appear that there is cause for substantial concern. Let's see if leverage points, influential points, and outliers are having unduly impact on our model.
+
+```{r}
+#Let's identify some leverage points, outliers, and influential points by the metrics we discussed in class.
+#create empty storage vectors
+leverage <- list()
+outliers <- list()
+inf_cooks <- list()
+inf_dffits <- list()
+inf_dfbetas <- list()
+#index over the respective models for each season to find influential points and store them
+for(i in 1:5){
+  # values to use in cutoffs
+  n <- nrow(train[[i]])
+  p <- 5
+
+  # define the cutoffs we will use
+  Hcut <- 2*((p+1)/n)
+  DFFITScut <- 2*sqrt((p+1)/n)
+  DFBETAcut <- 2/sqrt(n)
+  Dcut <- qf(0.5, p+1, n-p-1)
+
+  # identify the leverage points
+  h <- which(hatvalues(lms[[i]])>Hcut)
+
+  # identify the outliers
+  r <- which(rstandard(lms[[i]]) > 4)
+
+  # identify influential points by Cook's distance
+  D <- which(cooks.distance(lms[[i]]) > Dcut)
+
+  # identify influential points by DFFITS
+  fits <- which(dffits(lms[[i]]) > DFFITScut)
+
+  # identify influential points by DFBETAS
+  beta <- dfbetas(lms[[i]])
+  betas <- list()
+  for(j in 1:4){
+    betas[[j]] <- which(abs(beta[,j])>DFBETAcut)
+    
+    leverage[[i]] <- h
+    outliers[[i]] <- r
+    inf_cooks[[i]] <- D
+    inf_dffits[[i]] <- fits
+    inf_dfbetas[[i]] <- betas
+  }
+}
+```
+According to the cutoffs we defined, there are no points affecting the entire regression surfaces and no outliers. However, there are are a number of points affecting their own fitted value, roughly 10 per model. There are also roughly 20 points affecting the value of each coefficient in each model. I am confident that none of the data points are collection errors and there is certainly no reason to remove any of the points. In particular, exceptionally short or tall players will naturally be leverage points. There are players such as Shaquille O'Neale who are very tall and have very high defensive rebound percentages and so he is counted as an influential point for the 1996 season. However, this is unavoidable and we should simply keep in mind the presence of these points.
+
+At this point we should try fitting a model with square-root transformed predictor variables in order to see if we can alleviate some of the problems we've encountered with our models.
+
+```{r}
+#Let's re-perform the analyses we performed earlier on the square root variables.
+#make new sqrt data
+for(i in 1:5){
+  train[[i]]$sqrt_ast_pct <- sqrt(train[[i]]$ast)
+  train[[i]]$sqrt_dreb_pct <- sqrt(train[[i]]$dreb_pct)
+  train[[i]]$sqrt_oreb_pct <- sqrt(train[[i]]$oreb)
+  train[[i]]$sqrt_usg_pct <- sqrt(train[[i]]$usg_pct)
+  train[[i]]$sqrt_pts <- sqrt(train[[i]]$pts)
+}
+```
+
+
+```{r}
+#Create a function for comparing player height to a given variable from a given dataset.
+sqrt_vars <- c("sqrt_ast_pct", "sqrt_dreb_pct", "sqrt_oreb_pct", "sqrt_usg_pct", "sqrt_pts")
+make_sqrt_scatter <- function(var, data) {
+  ggplot(data, aes_string(x = "player_height", y = paste(var))) +
+    geom_point() +
+    ylab(paste(var))
+}
+
+#Make new vectors containing the output of the function for each season
+sqrt_scatr_1 <- lapply(sqrt_vars, make_sqrt_scatter, data = train[[1]])
+sqrt_scatr_2 <- lapply(sqrt_vars, make_sqrt_scatter, data = train[[2]])
+sqrt_scatr_3 <- lapply(sqrt_vars, make_sqrt_scatter, data = train[[3]])
+sqrt_scatr_4 <- lapply(sqrt_vars, make_sqrt_scatter, data = train[[4]])
+sqrt_scatr_5 <- lapply(sqrt_vars, make_sqrt_scatter, data = train[[5]])
+```
+
+```{r, fig.width = 10, fig.height =10}
+#Arrange the plots nicely for each season
+grid.arrange(grobs = sqrt_scatr_1)
+grid.arrange(grobs = sqrt_scatr_2)
+grid.arrange(grobs = sqrt_scatr_3)
+grid.arrange(grobs = sqrt_scatr_4)
+grid.arrange(grobs = sqrt_scatr_5)
+```
+
+```{r}
+#Wow, the relationships appear more linear when we look at the square root of the predictor! We'll go ahead and re-fit the models but with the transformed predictors this time.
+make_sqrt_models <- function(data){
+  lm(player_height ~ sqrt(ast_pct) + sqrt(dreb_pct) + sqrt(oreb_pct) + sqrt(usg_pct) + sqrt(pts), data = data)
+}
+
+sqrt_lms <- lapply(train, make_sqrt_models)
+sqrt_sums <- list()
+for(i in 1:5){
+  sqrt_sums[[i]] <- summary(sqrt_lms[[i]])
+}
+sqrt_sums
+```
+
+```{r}
+#Let's check conditions 1 and 2 for multiple linear regression. First we'll check condition 1 by plotting the response vs fitted values for the models.
+#We'll check condition 1 by plotting the response vs fitted values for the models.
+sqrt_fit_response_frames <- list()
+#make a data frame to store values
+for(i in 1:5){
+  sqrt_fit_response_frames[[i]] <- data.frame("Fitted Values" = sqrt_lms[[i]]$fitted.values,
+                                         "Response Values" = train[[i]]$player_height)
+}
+
+sqrt_fit_response <- list()
+#make plots for each season with ggplot
+for(i in 1:5){
+  sqrt_fit_response[[i]] <- ggplot(data = fit_response_frames[[i]],
+                              aes(x = Fitted.Values, y = Response.Values)) +
+    geom_point() +
+    ggtitle("Fitted vs. Response Plot") +
+    xlab("Fitted Values") +
+    ylab("Player Height (cm)")
+}
+sqrt_fit_response
+```
+
+
+```{r, message=FALSE}
+#In each case the player heights appear to be a linear function of the fitted values with constant variation, so it does not appear we have violated condition 1. This is great news. Let's check condition 2:
+sqrt_data <- list()
+for(i in 1:5){
+  sqrt_data[[i]] <- data.frame("Transformed Assist Pctg." = sqrt(train[[i]]$ast_pct),
+                               "Transformed Defensive Rebound Pctg." = sqrt(train[[i]]$dreb_pct),
+                               "Transformed Offensive Rebound Pctg." = sqrt(train[[i]]$oreb_pct),
+                               "Transformed Usage Pctg." = sqrt(train[[i]]$usg_pct),
+                               "Transformed Points" = sqrt(train[[i]]$pts))
+}
+ggpairs(sqrt_data[[1]], columns = 1:5,
+        upper= list(continuous = "blank"))
+ggpairs(sqrt_data[[2]], columns = 1:5,
+        upper= list(continuous = "blank"))
+ggpairs(sqrt_data[[3]], columns = 1:5,
+        upper= list(continuous = "blank"))
+ggpairs(sqrt_data[[4]], columns = 1:5,
+        upper= list(continuous = "blank"))
+ggpairs(sqrt_data[[5]], columns = 1:5,
+        upper= list(continuous = "blank"))
+
+#There certainly appears to be a linear relationship between all the predictors, and in particular between oreb_pct and dreb_pct and usg_pct. This is relatively unsurprising. However compared to before, the non-linear relationships between the predictors appear to have been reduced or eliminated entirely. Let's check the VIFs for all the predictors for each season to see if any of the predictors are presenting problems in terms of severe multicollinearity.
+sqrt_vifs <- list()
+for(i in 1:5){
+  sqrt_vifs[[i]] <- vif(sqrt_lms[[i]])
+}
+sqrt_vifs
+```
+
+Fortunately for us, none of the VIFs are above 5 (and only one is above 3) so it seems that our model does not contain excess multicollinearity. The transformed model appears to meet these conditions to a higher degree. Let's assess the assumptions for model-fitting to see if the transformed model is truly performing better. 
+
+```{r, fig_width = 10, fig_height = 15}
+#For each season, we will generate fitted vs. residual plots as well as QQ plots in order to assess the four assumptions for fitting a linear model: linearity of the relationship, homeoskedasticity, uncorrelated errors, and normally distributed errors. Uncorrelated errors is easy to verify since each data point represents one player's performance over an entire season and hence the data points are independent, so let's verify the other three.
+sqrt_qqplots <- list()
+sqrt_fit_res_plots <- list()
+for(i in 1:5){
+  sqrt_qqplots[[i]] <- gg_qqplot(sqrt_lms[[i]])
+  sqrt_fit_res_plots[[i]] <- gg_resfitted(sqrt_lms[[i]])
+}
+grid.arrange(grobs = qqplots)
+grid.arrange(grobs = fit_res_plots)
+```
+There appears to be a very slight curve in most of the fitted vs residual data, but overall it seems as though there are no violations of any of our assumptions; the residuals appear randomly distributed around 0 with constant variance and the points on the QQ plot do not deviate from the line with the exception of 1 or 2 points for each model. Compared to the untransformed model, the transformed model appears to be performing even better in every assessment so far.
+
+Let's identify the leverage, outlier, and influential points for the square root models to get a better idea of factors affecting the models' quality.
+```{r}
+#create empty storage vectors
+sqrt_leverage <- list()
+sqrt_outliers <- list()
+sqrt_inf_cooks <- list()
+sqrt_inf_dffits <- list()
+sqrt_inf_dfbetas <- list()
+#index over the respective models for each season to find influential points and store them
+for(i in 1:5){
+  # values to use in cutoffs
+  n <- nrow(train[[i]])
+  p <- 5
+
+  # define the cutoffs we will use
+  Hcut <- 2*((p+1)/n)
+  DFFITScut <- 2*sqrt((p+1)/n)
+  DFBETAcut <- 2/sqrt(n)
+  Dcut <- qf(0.5, p+1, n-p-1)
+
+  # identify the leverage points
+  h <- which(hatvalues(sqrt_lms[[i]])>Hcut)
+
+  # identify the outliers
+  r <- which(rstandard(sqrt_lms[[i]]) > 4)
+
+  # identify influential points by Cook's distance
+  D <- which(cooks.distance(sqrt_lms[[i]]) > Dcut)
+
+  # identify influential points by DFFITS
+  fits <- which(dffits(sqrt_lms[[i]]) > DFFITScut)
+
+  # identify influential points by DFBETAS
+  beta <- dfbetas(sqrt_lms[[i]])
+  betas <- list()
+  for(j in 1:4){
+    betas[[j]] <- which(abs(beta[,j])>DFBETAcut)
+    
+    sqrt_leverage[[i]] <- h
+    sqrt_outliers[[i]] <- r
+    sqrt_inf_cooks[[i]] <- D
+    sqrt_inf_dffits[[i]] <- fits
+    sqrt_inf_dfbetas[[i]] <- betas
+  }
+}
+```
+Once again we see that there are no outliers and no points which are considered influential on the entire regression surface. However, there are a number of points affecting model coefficients and their own fitted values for each model. The number of influential points for each model remains roughly similar for the transformed and untransformed models. However, there are overall less leverage points in the transformed model. This is likely due to the right skew of the transformed variables being much lower, leading to fewer extreme predictor values especially on the higher end.
+
+
+In order to answer my research question, I should pick a final model to use. Transformed models are more difficult to interpret, however it does seem our transformed model performs better than our untransformed model. To help make my decision, I will use several measures of model goodness.
+```{r}
+#We're going to create a table to help us decide which model to use.
+#Create a function generating model goodness measures given an input of a linear model.
+eval = function(model)
+{
+  n = length(model$residuals)
+  SSres <- sum(model$residuals^2)
+  Rsq <- summary(model)$r.squared
+  Rsq_adj <- summary(model)$adj.r.squared
+  p <- length(model$coefficients) - 1
+  AIC <- n*log(SSres/n) + 2*p
+  AICc <- AIC + (2*(p+2)*(p+3)/(n-p-1))
+  BIC <- n*log(SSres/n) + (p+2)*log(n)    
+  res <- c(SSres, Rsq, Rsq_adj, AIC, AICc, BIC)
+  names(res) <- c("SSres", "R^2", "Adj. R^2", "AIC", "AIC Corrected", "BIC")
+  return(res)
+}
+```
+
+
+```{r}
+#Apply the function to the transformed and untransformed models to get goodness measures and store them
+values <- lapply(lms, eval)
+sqrt_values <- lapply(sqrt_lms, eval)
+#Turn the output list into a dataframe so we can analyze it better
+values <- as.data.frame(do.call(rbind, values))
+sqrt_values <- as.data.frame(do.call(rbind, sqrt_values))
+
+#make the data frame a little more readable
+rownames(values) <- c("1996-97 Model", "2002-03 Model", "2008-09 Model",
+                      "2014-15 Model", "2020-21 Model")
+rownames(sqrt_values) <- c("1996-97 Model (Transformed)", "2002-03 Model (Transformed)", 
+                           "2008-09 Model (Transformed)", 
+                           "2014-15 Model (Transformed)", 
+                           "2020-21 Model (Transformed)")
+
+```
+
+
+```{r}
+#calculate the largest VIF of a variable in our model to put in the table
+max_vifs <- list()
+max_sqrt_vifs <- list()
+for(i in 1:5){
+  max_vifs[[i]] <- max(vifs[[i]])
+  max_sqrt_vifs[[i]] <- max(sqrt_vifs[[i]])
+}
+#save the VIFs into our data frame
+values$VIF <- max_vifs
+sqrt_values$VIF <- max_sqrt_vifs
+
+#Calculate the number of influential points (DFFITS) and store in our data frame
+for(i in 1:5){
+  values$DFFITS[[i]] <- length(inf_dffits[[i]])
+  sqrt_values$DFFITS[[i]] <- length(sqrt_inf_dffits[[i]])
+}
+#Calculate the number of influential points (DFBETAS) and store in our data frame
+for(i in 1:5){
+  values$Leverage[[i]] <- length(leverage[[i]])
+  sqrt_values$Leverage[[i]] <- length(sqrt_leverage[[i]])
+}
+```
+
+```{r}
+#create storage vecs
+comparison <- list()
+compar <- list()
+for(i in 1:5){
+  #set parameters
+  p <- 5
+  n = length(train[[i]]$X)
+  SSres <- sum(lms[[i]]$residuals^2)
+  #store model data in a list
+  compar[[1]] <- c(round(max(vifs[[i]]),digits=3),
+                   as.integer(length(leverage[[i]])),
+                   as.integer(length(inf_dffits[[i]])),
+                   round((lms[[i]]$coefficients[[1]]), digits = 3),
+                   round((lms[[i]]$coefficients[[2]]), digits = 3),
+                   round((lms[[i]]$coefficients[[3]]), digits = 3),
+                   round((lms[[i]]$coefficients[[4]]), digits = 3),
+                   round((lms[[i]]$coefficients[[5]]), digits = 3),
+                   round((lms[[i]]$coefficients[[6]]), digits = 3),
+                   round((summary(lms[[i]])$adj.r.squared), digits = 3),
+                   round((AIC(lms[[i]])),digits=3),
+                   round(((AIC(lms[[i]]) + (2*7*8)/((length(train[[i]])-4)))),digits=3),
+                   round(((n*log(SSres/n) + (p+2)*log(n))),digits=3))
+  #put the list into another list
+  comparison[[2*i-1]] <- compar[[1]]
+  #set params
+  SSres <- sum(sqrt_lms[[i]]$residuals^2)
+  compar[[2]] <- c(round(max(sqrt_vifs[[i]]),digits=3),
+                   as.integer(length(sqrt_leverage[[i]])),
+                   as.integer(length(sqrt_inf_dffits[[i]])),
+                   round((sqrt_lms[[i]]$coefficients[[1]]), digits = 3),
+                   round((sqrt_lms[[i]]$coefficients[[2]]), digits = 3),
+                   round((sqrt_lms[[i]]$coefficients[[3]]), digits = 3),
+                   round((sqrt_lms[[i]]$coefficients[[4]]), digits = 3),
+                   round((sqrt_lms[[i]]$coefficients[[5]]), digits = 3),
+                   round((sqrt_lms[[i]]$coefficients[[6]]), digits = 3),
+                   round((summary(sqrt_lms[[i]])$adj.r.squared), digits = 3),
+                   round((AIC(sqrt_lms[[i]])),digits=3),
+                   round(((AIC(sqrt_lms[[i]]) + (2*7*8)/((n-4)))),digits=3),
+                   round(((n*log(SSres/n) + (p+2)*log(n))),digits=3))
+  comparison[[2*i]] <- compar[[2]]
+}
+```
+
+```{r}
+#create a dataframe from the list generated previously
+comp_frame_1 <- data_frame("1996-97 Model" = comparison[[1]],
+                         "1996-97 Model Transformed" = comparison[[2]],
+                         "2002-03 Model" = comparison[[3]],
+                         "2002-03 Model Transformed" = comparison[[4]],
+                         "2008-09 Model" = comparison[[5]],
+                         "2008-09 Model Transformed" = comparison[[6]],
+                         "2014-2015 Model" = comparison[[7]],
+                         "2014-2015 Model Transformed" = comparison[[8]],
+                         "2020-21 Model" = comparison[[9]],
+                         "2020-21 Model Transformed" = comparison[[10]],)
+namescol <- c("Max VIF Value", 
+              "# of Leverage Points",
+              "# of Influential Points (DFFITS)",
+              "Intercept Coefficient",
+              "Assist Pct. Coefficient",
+              "Defensive Rebound Pct. Coefficient",
+              "Offensive Rebound Pct. Coefficient",
+              "Usage Pct. Coefficient",
+              "Points Coefficient",
+              "Adj. R-Squared", "AIC", "AIC corr.", "BIC")
+comp_frame_1
+```
+
+
+```{r, fig.width=15}
+#generate table using gt package
+tab_1 <- comp_frame_1 %>%
+  tibble::rownames_to_column("Model") %>%
+  gt() %>%
+  tab_header(
+    title = "NBA Regression Model Goodness Measures Comparison, All Seasons",
+    subtitle = "Goodness measures for linear regression models predicting player height as a function of five variables, transformed and untransformed"
+  ) %>%
+  tab_footnote(footnote= "Player height predicted as a function of average points scored, usage percentage,
+              assist percentage, defensive rebound percentage, and offensive rebound percentage per game")
+  
+tab_1
+gtsave(tab_1, "table1.png", vwidth=20000)
+```
+
+
+At this point it seems clear that we should use the transformed model. It performs slightly better in almost every season by almost every measure. Let's make it official and call the square root models our models moving forward.
+
+I want to see if we can drop one of points, usage, or both in all 5 models without losing too much information, since these variables are the least significant in all of the models I've fit and also appear to be quite collinear, so removing them has the potential to improve our model.
+
+```{r}
+#Let's see how our models perform if we drop usage percentage or points using the ANOVA F-test.
+#Make reduced models with a function
+make_red_models <- function(data){
+  lm(player_height ~ sqrt(ast_pct) + sqrt(dreb_pct) + sqrt(oreb_pct), data = data)
+}
+
+red_lms <- lapply(train, make_red_models)
+
+#Use ANOVA function to compare the reduced models with the full models
+for(i in 1:5){
+  print(anova(red_lms[[i]], sqrt_lms[[i]]))
+}
+sqrt_sums
+```
+The ANOVA partial F-test does not conclude that we should remove both points and usage percentage as these variables are explaining a significant amount of variance in most cases (except for the fourth model, where the p-value is around .4). We see that points and usage percentage have varying degrees of significance in each model depending on the season. I will decide to keep both predictors in the model as my research question requires me to fit the same model to 5 different seasons, so I can't remove individual predictors for each season. Hence, this will be my final model moving forward.
+
+We've done enough work on our model. We ought to be satisfied with how it's performing. At this point, let's attempt to validate our model.
+
+First let's compare the training and test datasets to check if they're extremely different from one another.
+```{r}
+mtr <- list()
+sdtr <- list()
+
+mtest <- list()
+sdtest <- list()
+for(i in 1:5){
+  mtr[[i]] <- apply(train[[i]][,3:8], 2, median)
+  sdtr[[i]] <- apply(train[[i]][,3:8], 2, sd)
+
+  mtest[[i]] <- apply(test[[i]][,3:8], 2, median)
+  sdtest[[i]] <- apply(test[[i]][,3:8], 2, sd)
+}
+
+mtr <- as.data.frame(do.call(rbind, mtr))
+sdtr <- as.data.frame(do.call(rbind, sdtr))
+mtest <- as.data.frame(do.call(rbind, mtest))
+sdtest <- as.data.frame(do.call(rbind, sdtest))
+
+print(mtr)
+print(sdtr)
+print(mtest)
+print(sdtest)
+```
+We see that there are no obvious radical differences between the training and test datasets according to a simple preliminary evaluation.
+
+```{r}
+#Now we'll fit our training model to our test model.
+test_lms <- lapply(test, make_sqrt_models)
+test_sums <- list()
+for(i in 1:5){
+  test_sums[[i]] <- summary(test_lms[[i]])
+}
+test_sums
+```
+
+
+```{r}
+#Let's perform the same steps we performed before to see how our model performs on the test dataset.
+
+test_plots_1 <- lapply(vars, make_sqrt_scatter, data = test[[1]])
+test_plots_2 <- lapply(vars, make_sqrt_scatter, data = test[[2]])
+test_plots_3 <- lapply(vars, make_sqrt_scatter, data = test[[3]])
+test_plots_4 <- lapply(vars, make_sqrt_scatter, data = test[[4]])
+test_plots_5 <- lapply(vars, make_sqrt_scatter, data = test[[5]])
+
+#arrange plots nicely
+grid.arrange(grobs = test_plots_1)
+grid.arrange(grobs = test_plots_2)
+grid.arrange(grobs = test_plots_3)
+grid.arrange(grobs = test_plots_4)
+grid.arrange(grobs = test_plots_5)
+```
+Nothing out of the ordinary in these relationships. They appear visually similar to the relationships we found in the training dataset.Let's verify condition 1 and 2.
+
+```{r}
+#plot fitted vs response to verify condition 1
+for(i in 1:5){
+  plot(test_lms[[i]]$fitted.values ~ test[[i]]$player_height)
+}
+
+```
+
+
+The fitted vs. response plots show a linear relationship about the identity function. No problems detected. Let's check condition 2.
+```{r}
+#plot pairs to verify condition 2
+pairs(sqrt(test[[1]][,4:8]))
+pairs(sqrt((test[[2]][,4:8])))
+pairs(sqrt((test[[3]][,4:8])))
+pairs(sqrt((test[[4]][,4:8])))
+pairs(sqrt((test[[5]][,4:8])))
+```
+We detected some collinearity. In particular between points and usage percentage, but this is similar to what we saw before. Otherwise, there don't appear to be problematic non-linear relationships between the predictors.
+
+```{r}
+#get test VIFs
+test_vifs <- list()
+for(i in 1:5){
+  test_vifs[[i]] <- vif(test_lms[[i]])
+}
+test_vifs
+```
+The VIF values look similar to the training models and we don't detect any new severe instances of multicollinearity which is good!
+```{r}
+#make QQ plots and fitted vs. residual plots
+test_qqplots <- list()
+test_fit_res_plots <- list()
+for(i in 1:5){
+  test_qqplots[[i]] <- gg_qqplot(test_lms[[i]])
+  test_fit_res_plots[[i]] <- gg_resfitted(test_lms[[i]])
+}
+grid.arrange(grobs = test_qqplots)
+grid.arrange(grobs = test_fit_res_plots)
+```
+The fitted vs. residual plots appear mostly unproblematic. We do see some possible violations of homeoskedasticity in the middle right model. We don't detect any new violations of normality, linearity, or constant variance. Everything looks good. Let's finally check for leverage points, outliers, and influential points.
+```{r}
+#Let's identify some leverage points, outliers, and influential points by the metrics we discussed in class.
+#create empty storage vectors
+test_leverage <- list()
+test_outliers <- list()
+test_inf_cooks <- list()
+test_inf_dffits <- list()
+test_inf_dfbetas <- list()
+#index over the respective models for each season to find influential points and store them
+for(i in 1:5){
+  # values to use in cutoffs
+  n <- nrow(test[[i]])
+  p <- 5
+
+  # define the cutoffs we will use
+  Hcut <- 2*((p+1)/n)
+  DFFITScut <- 2*sqrt((p+1)/n)
+  DFBETAcut <- 2/sqrt(n)
+  Dcut <- qf(0.5, p+1, n-p-1)
+
+  # identify the leverage points
+  h <- which(hatvalues(test_lms[[i]])>Hcut)
+
+  # identify the outliers
+  r <- which(rstandard(test_lms[[i]]) > 4)
+
+  # identify influential points by Cook's distance
+  D <- which(cooks.distance(test_lms[[i]]) > Dcut)
+
+  # identify influential points by DFFITS
+  fits <- which(dffits(test_lms[[i]]) > DFFITScut)
+
+  # identify influential points by DFBETAS
+  beta <- dfbetas(test_lms[[i]])
+  betas <- list()
+  for(j in 1:4){
+    betas[[j]] <- which(abs(beta[,j])>DFBETAcut)
+    
+    test_leverage[[i]] <- h
+    test_outliers[[i]] <- r
+    test_inf_cooks[[i]] <- D
+    test_inf_dffits[[i]] <- fits
+    test_inf_dfbetas[[i]] <- betas
+  }
+}
+```
+No outliers and no influential points affecting the entire regression surface. Perfect! We do detect some influential points via DFFITS and DFBETAS, as well as some leverage points, but the proportion of leverage points and influential points seems proportionate to our test model.
+
+```{r}
+#create storage vecs
+comparison <- list()
+compar <- list()
+for(i in 1:5){
+  #store model data in a list
+  compar[[1]] <- c(length(train[[i]]$X),
+                   round((max(sqrt_vifs[[i]])),digits=2),
+                   as.integer(length(sqrt_leverage[[i]])),
+                   as.integer(length(sqrt_inf_dffits[[i]])),
+                   paste((round(sqrt_lms[[i]]$coefficients[[1]], digits = 3)),"***"),
+                   paste((round(sqrt_lms[[i]]$coefficients[[2]], digits = 3)),"***"),
+                   round(sqrt_lms[[i]]$coefficients[[3]], digits = 3),
+                   round(sqrt_lms[[i]]$coefficients[[4]], digits = 3),
+                   round(sqrt_lms[[i]]$coefficients[[5]], digits = 3),
+                   round(sqrt_lms[[i]]$coefficients[[6]], digits = 3),
+                   round(summary(sqrt_lms[[i]])$adj.r.squared, digits = 3))
+  
+  #put the list into another list
+  comparison[[2*i-1]] <- compar[[1]]
+
+  compar[[2]] <- c(length(test[[i]]$X),
+                   round((max(test_vifs[[i]])),digits=2),
+                   as.integer(length(test_leverage[[i]])),
+                   as.integer(length(test_inf_dffits[[i]])),
+                   paste((round(test_lms[[i]]$coefficients[[1]], digits = 3)),"***"),
+                   paste((round(test_lms[[i]]$coefficients[[2]], digits = 3)),"***"),
+                   round(test_lms[[i]]$coefficients[[3]], digits = 3),
+                   round(test_lms[[i]]$coefficients[[4]], digits = 3),
+                   round(test_lms[[i]]$coefficients[[5]], digits = 3),
+                   round(test_lms[[i]]$coefficients[[6]], digits = 3),
+                   round(summary(test_lms[[i]])$adj.r.squared, digits = 3))
+                   
+  comparison[[2*i]] <- compar[[2]]
+}
+```
+
+
+```{r, warning = FALSE}
+#create a dataframe from the list generated previously
+comp_frame <- data_frame("1996-97 Model Train" = comparison[[1]],
+                         "1996-97 Model Test" = comparison[[2]],
+                         "2002-03 Model Train" = comparison[[3]],
+                         "2002-03 Model Test" = comparison[[4]],
+                         "2008-09 Model Train" = comparison[[5]],
+                         "2008-09 Model Test" = comparison[[6]],
+                         "2014-2015 Model Train" = comparison[[7]],
+                         "2014-2015 Model Test" = comparison[[8]],
+                         "2020-21 Model Train" = comparison[[9]],
+                         "2020-21 Model Test" = comparison[[10]],)
+namescol <- c("Size","Max VIF Value", 
+                          "# of Leverage Points",
+                          "# of Influential Points (DFFITS)",
+                          "Intercept Coefficient",
+                          "Square Root of Assist Pct. Coefficient",
+                          "Square Root of Defensive Rebound Pct. Coefficient",
+                          "Square Root of Offensive Rebound Pct. Coefficient",
+                          "Square Root of Usage Pct. Coefficient",
+                          "Square Root of Points Coefficient",
+                          "Adj. R-Squared")
+comp_frame <- cbind(comp_frame, namescol)
+```
+
+```{r}
+#manually input a bunch of stuff to make a table better.......... 
+comp_frame[[7,1]] <- paste(comp_frame[[7,1]],"***")
+comp_frame[[8,1]] <- paste(comp_frame[[8,1]],"***")
+comp_frame[[9,1]] <- paste(comp_frame[[9,1]],"**")
+comp_frame[[7,3]] <- paste(comp_frame[[7,3]],"***")
+comp_frame[[8,3]] <- paste(comp_frame[[8,3]],".")
+comp_frame[[7,5]] <- paste(comp_frame[[7,5]],"***")
+comp_frame[[8,5]] <- paste(comp_frame[[8,5]],"***")
+comp_frame[[10,5]] <- paste(comp_frame[[10,5]],".")
+comp_frame[[6,7]] <- paste(comp_frame[[7,7]],"***")
+comp_frame[[8,7]] <- paste(comp_frame[[8,7]],"*")
+comp_frame[[7,9]] <- paste(comp_frame[[7,9]],"***")
+comp_frame[[8,9]] <- paste(comp_frame[[8,9]],"***")
+comp_frame[[10,9]] <- paste(comp_frame[[10,9]],"**")
+comp_frame[[7,2]] <- paste(comp_frame[[7,2]],"***")
+comp_frame[[9,2]] <- paste(comp_frame[[9,2]],"*")
+comp_frame[[7,4]] <- paste(comp_frame[[7,4]],"***")
+comp_frame[[8,4]] <- paste(comp_frame[[8,4]],"**")
+comp_frame[[9,4]] <- paste(comp_frame[[9,4]],"*")
+comp_frame[[7,6]] <- paste(comp_frame[[7,6]],"***")
+comp_frame[[8,6]] <- paste(comp_frame[[8,6]],"*")
+comp_frame[[9,6]] <- paste(comp_frame[[9,6]],".")
+comp_frame[[7,8]] <- paste(comp_frame[[7,8]],"*")
+comp_frame[[8,8]] <- paste(comp_frame[[8,8]],"***")
+comp_frame[[10,8]] <- paste(comp_frame[[10,8]],".")
+comp_frame[[7,10]] <- paste(comp_frame[[7,10]],"***")
+```
+
+```{r}
+#use gt package to make a table
+appendix <- comp_frame %>%
+  gt(rowname_col = "namescol") %>%
+  tab_header(
+    title = "NBA Regression Analysis Training and Test Model Comparison, All Seasons",
+    subtitle = "Linear models fit to training and test data sets"
+  ) %>%
+  tab_footnote(footnote= "*** indicates p~0,  ** indicates p<0.01, * indicates p<0.05, . indicates p<0,1, no symbol indicates p>0.1") %>%
+  tab_stubhead(label = "Characteristic")
+  
+appendix
+gtsave(appendix, "table_appendix.png", vwidth=1250)
+```
+
+We'll construct confidence intervals for the training slope coefficients to see if the test coefficients lie within the confidence intervals.
+```{r, warning = FALSE}
+#generate confidence intervals for training model coefficients
+confints <- list()
+for(i in 1:5){
+ confints[[i]] <- confint(sqrt_lms[[i]], level=0.95)
+}
+tests <- list()
+#test to see which test coefficients lie in the confidence intervals
+for(i in 1:5){
+  tests[[i]] <- c(between(test_lms[[i]]$coefficients[[1]], confints[[i]][1,1], confints[[i]][1,2]),
+                 between(test_lms[[i]]$coefficients[[2]], confints[[i]][2,1], confints[[i]][2,2]),
+                 between(test_lms[[i]]$coefficients[[3]], confints[[i]][3,1], confints[[i]][3,2]),
+                 between(test_lms[[i]]$coefficients[[4]], confints[[i]][4,1], confints[[i]][4,2]),
+                 between(test_lms[[i]]$coefficients[[5]], confints[[i]][5,1], confints[[i]][5,2]),
+                 between(test_lms[[i]]$coefficients[[6]], confints[[i]][6,1], confints[[i]][6,2]))
+}
+tests
+```
+
+Not all of the coefficient estimates for the test model fall within the 95% confidence interval, but most do. In particular, the fourth test model appears to perform substantially different from the training model. Let's perform a short EDA to see if we can find out why.
+
+```{r, message = FALSE}
+#make a function to generate plots of dataset variables
+EDA_graphs <- function(var, data){
+  title <- paste(paste(var), "Frequency for NBA Players,", data[[1,2]])
+  plot <- ggplot(data, aes(x=sqrt(data[,names(data) == var]))) + 
+    geom_histogram(color="darkblue", fill="lightblue") + 
+    ggtitle(title) + 
+    xlab(paste(var)) + 
+    ylab("Frequency")
+}
+#make a vector to grab the variables we need
+EDA_vars <- c("player_height", "ast_pct", "pts", "usg_pct", "oreb_pct", "dreb_pct")
+#apply the function
+EDA_train <- lapply(EDA_vars, EDA_graphs, data = train[[4]])
+EDA_test <- lapply(EDA_vars, EDA_graphs, data = test[[4]])
+#print the output nicely
+grid.arrange(grobs = EDA_train)
+grid.arrange(grobs = EDA_test)
+```
+As it turns out, the training dataset for the 2014-2015 season was noticeably right-skewed compared to the test dataset. This could definitely have affected how the regression models were fit.
+
+```{r}
+#look at the influential points (DFFITS) for the training and test models
+influencers_train <- train[[4]][names(sqrt_inf_dffits[[4]]),]
+influencers_test <- test[[4]][names((test_inf_dffits[[4]])),]
+influencers_train
+influencers_test
+#get some data for comparison
+summary(train[[4]]$player_height)
+summary(test[[4]]$player_height)
+summary(train[[4]]$ast_pct)
+summary(test[[4]]$ast_pct)
+summary(train[[4]]$oreb_pct)
+summary(test[[4]]$oreb_pct)
+summary(train[[4]]$dreb_pct)
+summary(test[[4]]$dreb_pct)
+```
+
+Additionally, we see that there are some very tall players with extremely low assist and offensive rebounding percentage in the test dataset, and some very tall players with extremely high defensive rebounding and low offensive rebounding in the training dataset. These influential points are likely biasing the models and may be part of the reason why the coefficients for these variables as predictors of height differ from the training to test models.
+
+The differing coefficient values are okay, but the models having different significant predictors is unsettling. Pessimistically, the differences are substantial enough that we fail to validate. Better this than to validate optimistically.
+
+# Everything after this point is exclusively for generating report graphics
+
+Let's make some plots to assess our final model and see what we can interpret.
+```{r}
+#First let's get the coefficients from the final model
+year = c("1996-97", "2002-03", "2008-09",
+                      "2014-15", "2020-21")
+heights <- data.frame(value = 
+                        c(median(train[[1]]$player_height),
+                          median(train[[2]]$player_height),
+                          median(train[[3]]$player_height),
+                          median(train[[4]]$player_height),
+                          median(train[[5]]$player_height)),
+                      Year = year)
+assist_coefs <- data.frame(coefficient = 
+                             c(sqrt_lms[[1]]$coefficients[2],
+                             sqrt_lms[[2]]$coefficients[2],
+                             sqrt_lms[[3]]$coefficients[2],
+                             sqrt_lms[[4]]$coefficients[2],
+                             sqrt_lms[[5]]$coefficients[2]),
+                           Year = year)
+dreb_coefs <- data.frame(coefficient = 
+                           c(sqrt_lms[[1]]$coefficients[3],
+                           sqrt_lms[[2]]$coefficients[3],
+                           sqrt_lms[[3]]$coefficients[3],
+                           sqrt_lms[[4]]$coefficients[3],
+                           sqrt_lms[[5]]$coefficients[3]),
+                         Year = year)
+oreb_coefs <- data.frame(coefficient = 
+                           c(sqrt_lms[[1]]$coefficients[4],
+                             sqrt_lms[[2]]$coefficients[4],
+                             sqrt_lms[[3]]$coefficients[4],
+                             sqrt_lms[[4]]$coefficients[4],
+                             sqrt_lms[[5]]$coefficients[4]),
+                         Year = year)
+usg_coefs <- data.frame(coefficient = 
+                          c(sqrt_lms[[1]]$coefficients[5],
+                          sqrt_lms[[2]]$coefficients[5],
+                          sqrt_lms[[3]]$coefficients[5],
+                          sqrt_lms[[4]]$coefficients[5],
+                          sqrt_lms[[5]]$coefficients[5]),
+                        Year = year)
+pts_coefs <- data.frame(coefficient = c(sqrt_lms[[1]]$coefficients[6],
+                          sqrt_lms[[2]]$coefficients[6],
+                          sqrt_lms[[3]]$coefficients[6],
+                          sqrt_lms[[4]]$coefficients[6],
+                          sqrt_lms[[5]]$coefficients[6]),
+                        Year = year)
+r_sqr <- data.frame(coefficient = c(summary(sqrt_lms[[1]])$r.squared,
+                          summary(sqrt_lms[[2]])$adj.r.squared,
+                          summary(sqrt_lms[[3]])$adj.r.squared,
+                          summary(sqrt_lms[[4]])$adj.r.squared,
+                          summary(sqrt_lms[[5]])$adj.r.squared),
+                        Year = year)
+```
+
+
+
+```{r}
+ast_plot <- ggplot(data=assist_coefs, aes(x=year, y=coefficient, group=1)) +
+  geom_line(color="Dark Blue") +
+  geom_point(color = "Dark Blue") +
+  ggtitle("Assist Percentage") +
+  xlab("NBA Season") +
+  ylab("Coefficient") +
+  theme(axis.title.x=element_text(size=20)) +
+  theme(plot.title=element_text(size=20)) +
+  theme(axis.text.y=element_text(size=18)) +
+  theme(axis.text.x=element_text(size=13)) +
+  theme(axis.title.y=element_text(size=16))
+
+dreb_plot <- ggplot(data=dreb_coefs, aes(x=year, y=coefficient, group=1)) +
+  geom_line(color="Dark Red") +
+  geom_point(color = "Dark Red") +
+  ggtitle("Defensive Rebound Percentage") +
+  xlab("NBA Season") +
+  ylab("Coefficient") +
+  theme(axis.title.x=element_text(size=20)) +
+  theme(plot.title=element_text(size=20)) +
+  theme(axis.text.y=element_text(size=18)) +
+  theme(axis.text.x=element_text(size=13)) +
+  theme(axis.title.y=element_text(size=16))
+
+oreb_plot <- ggplot(data=oreb_coefs, aes(x=year, y=coefficient, group=1)) +
+  geom_line(color="Dark Green") +
+  geom_point(color = "Dark Green") +
+  ggtitle("Offensive Rebound Percentage") +
+  xlab("NBA Season") +
+  ylab("Coefficient") +
+  theme(axis.title.x=element_text(size=20)) +
+  theme(plot.title=element_text(size=20)) +
+  theme(axis.text.y=element_text(size=18)) +
+  theme(axis.text.x=element_text(size=13)) +
+  theme(axis.title.y=element_text(size=16))
+```
+
+
+```{r}
+p <- arrangeGrob(ast_plot, oreb_plot, dreb_plot,
+             top = 
+               textGrob("Coefficients of Square Root Transformed Variables as Predictors of NBA Player Height for Five Seasons", gp = gpar(fontsize = 22, fontface = "bold")), nrow= 1)
+```
+
+
+```{r}
+ggsave("coeffs_lines.png", p, width = 15, height=3)
+```
+
+
+```{r}
+hgt_plot_95 <- ggplot(data = seasons[[1]], aes(x=player_height)) +
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Player Height") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=26),
+        axis.text.y=element_text(size=24))
+
+ast_plot_95 <- ggplot(data = seasons[[1]], aes(x=ast_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Assist Percentage") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=26),
+        axis.text.y=element_text(size=24))
+
+dreb_plot_95 <- ggplot(data = seasons[[1]], aes(x=dreb_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Def. Rebound Pctg.") + 
+   ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=26),
+        axis.text.y=element_text(size=24))
+
+oreb_plot_95 <- ggplot(data = seasons[[1]], aes(x=oreb_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Off. Rebound Pctg.") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=24),
+        axis.text.y=element_text(size=24))
+
+usg_plot_95 <- ggplot(data = seasons[[1]], aes(x=usg_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+   xlab("Usage Percentage") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=24),
+        axis.text.y=element_text(size=24))
+
+pts_plot_95 <- ggplot(data = seasons[[1]], aes(x=pts)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Points") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=24),
+        axis.text.y=element_text(size=24))
+
+hgt_plot_20 <- ggplot(data = seasons[[5]], aes(x=player_height)) +
+  geom_histogram(color="darkblue", fill="lightblue") +
+  xlab("Player Height") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=22),
+        axis.text.y=element_text(size=24))
+
+ast_plot_20 <- ggplot(data = seasons[[5]], aes(x=ast_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Assist Percentage") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=26),
+        axis.text.y=element_text(size=24))
+
+dreb_plot_20 <- ggplot(data = seasons[[5]], aes(x=dreb_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Def. Rebound Pctg.") + 
+   ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=26),
+        axis.text.y=element_text(size=24))
+
+oreb_plot_20 <- ggplot(data = seasons[[5]], aes(x=oreb_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Off. Rebound Pctg.") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=26),
+        axis.text.y=element_text(size=24))
+
+usg_plot_20 <- ggplot(data = seasons[[5]], aes(x=usg_pct)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+   xlab("Usage Percentage") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=24),
+        axis.text.y=element_text(size=24))
+
+pts_plot_20 <- ggplot(data = seasons[[5]], aes(x=pts)) + 
+  geom_histogram(color="darkblue", fill="lightblue") + 
+  xlab("Points") + 
+  ylab("Frequency") +
+  theme(axis.title.x=element_text(size=30),
+        axis.title.y=element_text(size=28),
+        axis.text.x=element_text(size=24),
+        axis.text.y=element_text(size=24))
+
+plots_95 <- list(hgt_plot_95, ast_plot_95, dreb_plot_95,
+                oreb_plot_95, usg_plot_95, pts_plot_95)
+plots_20 <- list(hgt_plot_20, ast_plot_20, dreb_plot_20,
+                oreb_plot_20, usg_plot_20, pts_plot_20)
+```
+
+```{r, message = FALSE, fig.width = 25, fig.height = 8}
+rowlay <- rbind(c(1,2,3,4,5,6))
+plots_95_arrange <- arrangeGrob(grobs = plots_95, layout_matrix = rowlay,
+                                top = textGrob("Response and Predictor Variables Chosen for Regression Analysis , 1995-1996 Season", gp = gpar(fontsize = 40, fontface = "bold")))
+plots_20_arrange <- arrangeGrob(grobs = plots_20, layout_matrix = rowlay,
+                                top = textGrob("Response and Predictor Variables Chosen for Regression Analysis , 2020-2021 Season", gp = gpar(fontsize = 40, fontface = "bold")))
+g <- grid.arrange(plots_95_arrange, plots_20_arrange, nrow = 2)
+ggsave("fig1.png", g)
+```
+
+```{r, message=FALSE}
+fitres1 <- fit_res_plots[[3]]
+fitres2 <- sqrt_fit_res_plots[[3]]
+qqplot1 <- qqplots[[3]]
+qqplot2 <- sqrt_qqplots[[3]]
+response1 <- fit_response[[3]]
+response2 <- sqrt_fit_response[[3]]
+```
+
+```{r, fig.height= 6, fig.width=10}
+diagnostics1 <- arrangeGrob(fitres1, qqplot1, response1, ncol=1,
+                            top = textGrob("Diagnostic Plots, Untransformed Model", gp = gpar(fontsize = 16)))
+
+diagnostics2 <- arrangeGrob(fitres2, qqplot2, response2, ncol=1,
+                            top = textGrob("Diagnostic Plots, Square Root Transformed Model", gp = gpar(fontsize = 16)))
+```
+
+
+```{r, fig.height= 6, fig.width=10}
+q <- grid.arrange(diagnostics1, diagnostics2, ncol = 2)
+ggsave("Diagnostics.png", q)
+```
+
+```{r}
+#make a frame for the report
+comp_frame_report <- comp_frame_1[,c(1,2,9,10)]
+namescol <- c("Max VIF Value", 
+              "# of Leverage Points",
+              "# of Influential Points (DFFITS)",
+              "Intercept Coefficient",
+              "Assist Pct. Coefficient",
+              "Defensive Rebound Pct. Coefficient",
+              "Offensive Rebound Pct. Coefficient",
+              "Usage Pct. Coefficient",
+              "Points Coefficient",
+              "Adj. R-Squared", "AIC", "AIC corr.", "BIC")
+comp_frame_report <- cbind(comp_frame_report, namescol)
+```
+
+```{r}
+comp_frame_report[[4,2]] <- paste(comp_frame_report[[4,2]],"***")
+comp_frame_report[[5,2]] <- paste(comp_frame_report[[5,2]],"***")
+comp_frame_report[[6,2]] <- paste(comp_frame_report[[6,2]],"***")
+comp_frame_report[[7,2]] <- paste(comp_frame_report[[7,2]],"***")
+comp_frame_report[[8,2]] <- paste(comp_frame_report[[8,2]],"**")
+comp_frame_report[[4,4]] <- paste(comp_frame_report[[4,4]],"***")
+comp_frame_report[[5,4]] <- paste(comp_frame_report[[5,4]],"***")
+comp_frame_report[[6,4]] <- paste(comp_frame_report[[6,4]],"***")
+comp_frame_report[[7,4]] <- paste(comp_frame_report[[7,4]],"***")
+comp_frame_report[[9,4]] <- paste(comp_frame_report[[9,4]],"**")
+comp_frame_report[[4,1]] <- paste(comp_frame_report[[4,1]],"***")
+comp_frame_report[[5,1]] <- paste(comp_frame_report[[5,1]],"***")
+comp_frame_report[[6,1]] <- paste(comp_frame_report[[6,1]],"***")
+comp_frame_report[[7,1]] <- paste(comp_frame_report[[7,1]],"**")
+comp_frame_report[[8,1]] <- paste(comp_frame_report[[8,1]],"**")
+comp_frame_report[[4,3]] <- paste(comp_frame_report[[4,3]],"***")
+comp_frame_report[[5,3]] <- paste(comp_frame_report[[5,3]],"***")
+comp_frame_report[[6,3]] <- paste(comp_frame_report[[6,3]],"***")
+comp_frame_report[[7,3]] <- paste(comp_frame_report[[7,3]],"***")
+comp_frame_report[[9,3]] <- paste(comp_frame_report[[9,3]],"***")
+sums
+```
+
+```{r}
+#generate table using gt package
+
+tab_rep <- comp_frame_report %>%
+  gt(rowname_col = "namescol") %>%
+  tab_header(
+    title = "NBA Regression Models Goodness Measures Comparison",
+    subtitle = "Data fit to two 1996-97 and 2020-21 Seasons, Untransformed and Square Root Transformed Models"
+  ) %>%
+  tab_footnote(footnote= "*** indicates p~0,  ** indicates p<0.01, * indicates p<0.05, . indicates p<0,1, no symbol indicates p>0.1") %>%
+  tab_stubhead(label = "Characteristic")
+  
+tab_rep
+gtsave(tab_rep, "table_report.png", vwidth=3000)
+```
+
+
+```{r}
+table_95 <- tbl_regression(sqrt_lms[[1]],
+               label = list("sqrt(ast_pct)" ~ "Sqrt. Assist Pctg.",
+                            "sqrt(dreb_pct)" ~ "Sqrt. D. Reb. Pctg",
+                           "sqrt(oreb_pct)" ~ "Sqrt. O. Reb. Pctg",
+                            "sqrt(usg_pct)" ~ "Sqrt. Usage Pctg.",
+                            "sqrt(pts)" ~ "Sqrt. Points"),
+               intercept = TRUE)
+```
+
+
+```{r}
+sqrt_lms[[1]] %>%
+  tbl_regression(label = list("sqrt(ast_pct)" ~ "Sqrt. Assist Pctg.",
+                            "sqrt(dreb_pct)" ~ "Sqrt. D. Reb. Pctg",
+                           "sqrt(oreb_pct)" ~ "Sqrt. O. Reb. Pctg",
+                            "sqrt(usg_pct)" ~ "Sqrt. Usage Pctg.",
+                            "sqrt(pts)" ~ "Sqrt. Points"),
+                 intercept = TRUE) %>%
+  as_gt() %>%
+  tab_header(title = "1995-96 Final Model") %>%
+  gtsave("model1.png")
+
+sqrt_lms[[2]] %>%
+  tbl_regression(label = list("sqrt(ast_pct)" ~ "Sqrt. Assist Pctg.",
+                            "sqrt(dreb_pct)" ~ "Sqrt. D. Reb. Pctg",
+                           "sqrt(oreb_pct)" ~ "Sqrt. O. Reb. Pctg",
+                            "sqrt(usg_pct)" ~ "Sqrt. Usage Pctg.",
+                            "sqrt(pts)" ~ "Sqrt. Points"),
+                 intercept = TRUE) %>%
+  as_gt() %>%
+  tab_header(title = "2002-03 Final Model") %>%
+  gtsave("model2.png")
+
+sqrt_lms[[3]] %>%
+  tbl_regression(label = list("sqrt(ast_pct)" ~ "Sqrt. Assist Pctg.",
+                            "sqrt(dreb_pct)" ~ "Sqrt. D. Reb. Pctg",
+                           "sqrt(oreb_pct)" ~ "Sqrt. O. Reb. Pctg",
+                            "sqrt(usg_pct)" ~ "Sqrt. Usage Pctg.",
+                            "sqrt(pts)" ~ "Sqrt. Points"),
+                 intercept = TRUE) %>%
+  as_gt() %>%
+  tab_header(title = "2008-09 Final Model") %>%
+  gtsave("model3.png")
+
+sqrt_lms[[4]] %>%
+  tbl_regression(label = list("sqrt(ast_pct)" ~ "Sqrt. Assist Pctg.",
+                            "sqrt(dreb_pct)" ~ "Sqrt. D. Reb. Pctg",
+                           "sqrt(oreb_pct)" ~ "Sqrt. O. Reb. Pctg",
+                            "sqrt(usg_pct)" ~ "Sqrt. Usage Pctg.",
+                            "sqrt(pts)" ~ "Sqrt. Points"),
+                 intercept = TRUE) %>%
+  as_gt() %>%
+  tab_header(title = "2014-15 Final Model") %>%
+  gtsave("model4.png")
+
+sqrt_lms[[5]] %>%
+  tbl_regression(label = list("sqrt(ast_pct)" ~ "Sqrt. Assist Pctg.",
+                            "sqrt(dreb_pct)" ~ "Sqrt. D. Reb. Pctg",
+                           "sqrt(oreb_pct)" ~ "Sqrt. O. Reb. Pctg",
+                            "sqrt(usg_pct)" ~ "Sqrt. Usage Pctg.",
+                            "sqrt(pts)" ~ "Sqrt. Points"),
+                 intercept = TRUE) %>%
+  as_gt() %>%
+  tab_header(title = "2020-21 Final Model") %>%
+  gtsave("model5.png")
+```
+
+```{r}
+library(magick)
+library(cowplot)
+flay <- rbind(c(1, 2, 3),
+              c(4, NA, 5))
+model1 <- as_grob(ggdraw() + draw_image("model1.png"))
+model2 <- as_grob(ggdraw() + draw_image("model2.png"))
+model3 <- as_grob(ggdraw() + draw_image("model3.png"))
+model4 <- as_grob(ggdraw() + draw_image("model4.png"))
+model5 <- as_grob(ggdraw() + draw_image("model5.png"))
+g <- grid.arrange(model1, model2, model3, model4, model5, nrow=2, layout_matrix = flay)
+ggsave("final_models.png",g)
+```
+
+```{r}
+png("pairs1.png", height = 400, width = 400)
+g <- ggpairs(train[[1]], columns = c(6,4,5),
+        upper= list(continuous = "blank"),
+        columnLabels = c("Assist Pctg.", "Def. Reb. Pctg.", "Off. Reb. Pctg."),
+        title = "Untransformed Pairwise Predictor Variable Plots")
+print(g)
+dev.off()
+png("pairs2.png", height = 400, width = 400)
+g <- ggpairs(sqrt_data[[3]], columns = 1:3,
+        upper= list(continuous = "blank"),
+        columnLabels = c("Sqrt. Assist Pctg.", "Sqrt. Def. Reb. Pctg.", "Sqrt. Off. Reb. Pctg."),
+        title = "Square Root Transformed Pairwise Predictor Variable Plots")
+print(g)
+dev.off()
+```
+
+
+```{r}
+pair1 <- as_grob(ggdraw() + draw_image("pairs1.png"))
+pair2 <- as_grob(ggdraw() + draw_image("pairs2.png"))
+g <- grid.arrange(pair1, pair2, nrow = 2)
+ggsave("pairs.png", g)
+```
+
+
